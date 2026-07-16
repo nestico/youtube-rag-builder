@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).parent.parent
-METADATA_FILE = ROOT / "metadata" / "command_bar_playlist.json"
-TRANSCRIPTS_DIR = ROOT / "transcripts"
+METADATA_FILE = ROOT / "metadata" / "youtube" / "command_bar_playlist.json"
+TRANSCRIPTS_DIR = ROOT / "transcripts" / "youtube"
 MARKDOWN_DIR = ROOT / "markdown"
-VIDEOS_DIR = MARKDOWN_DIR / "videos"
-PLAYLISTS_DIR = MARKDOWN_DIR / "playlists"
+VIDEOS_DIR = MARKDOWN_DIR / "youtube" / "videos"
+PLAYLISTS_DIR = MARKDOWN_DIR / "youtube" / "playlists"
 INDEX_DIR = ROOT / "index"
 MANIFEST_FILE = INDEX_DIR / "markdown_manifest.json"
 
@@ -183,8 +183,8 @@ def create_index(
         lines.append(f"- {vf}")
     lines.append("")
 
-    MARKDOWN_DIR.mkdir(parents=True, exist_ok=True)
-    with open(MARKDOWN_DIR / "index.md", "w", encoding="utf-8") as f:
+    (MARKDOWN_DIR / "youtube").mkdir(parents=True, exist_ok=True)
+    with open(MARKDOWN_DIR / "youtube" / "index.md", "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
 

@@ -4,7 +4,7 @@
 
 **Script:** `scripts/extract_playlist.py`  
 **Input:** YouTube playlist URL (hardcoded in script)  
-**Output:** `metadata/command_bar_playlist.json`
+**Output:** `metadata/youtube/command_bar_playlist.json`
 
 Uses `yt-dlp` with `extract_flat=True` to fetch playlist metadata without downloading videos. The output JSON includes the playlist title, channel name, description, and a list of video entries (id, title, url, duration).
 
@@ -28,8 +28,8 @@ py scripts/extract_playlist.py
 ## Stage 2 — Transcript Extraction
 
 **Script:** `scripts/extract_all_transcripts.py`  
-**Input:** `metadata/command_bar_playlist.json`  
-**Output:** `transcripts/{video_id}.json`, `index/videos.csv`, `index/videos.json`
+**Input:** `metadata/youtube/command_bar_playlist.json`  
+**Output:** `transcripts/youtube/{video_id}.json`, `index/videos.csv`, `index/videos.json`
 
 Iterates every video in the playlist metadata and calls `YouTubeTranscriptApi` to fetch the auto-generated or manual transcript. Each transcript is saved as a JSON array of `{text, start, duration}` segments.
 
@@ -52,8 +52,8 @@ py scripts/extract_all_transcripts.py
 ## Stage 3 — Markdown Generation
 
 **Script:** `scripts/generate_markdown.py`  
-**Input:** `metadata/command_bar_playlist.json` + `transcripts/*.json`  
-**Output:** `markdown/videos/{video_id}.md`, `markdown/playlists/{slug}.md`, `markdown/index.md`, `index/markdown_manifest.json`
+**Input:** `metadata/youtube/command_bar_playlist.json` + `transcripts/youtube/*.json`  
+**Output:** `markdown/youtube/videos/{video_id}.md`, `markdown/youtube/playlists/{slug}.md`, `markdown/youtube/index.md`, `index/markdown_manifest.json`
 
 Merges each transcript into a single continuous text, deduplicating consecutive repeated segments. Generates one markdown file per video and one playlist index file.
 
@@ -81,15 +81,15 @@ Channel: ...
 ## Stage 4 — AI Enrichment
 
 **Script:** `scripts/enrich_markdown.py`  
-**Input:** `markdown/videos/*.md`  
-**Output:** `markdown/enriched/videos/*.md`, `markdown/enriched/playlists/*.md`, `cache/enrichment/*.json`, `index/enriched_manifest.json`
+**Input:** `markdown/youtube/videos/*.md`  
+**Output:** `markdown/enriched/youtube/videos/*.md`, `markdown/enriched/youtube/playlists/*.md`, `cache/enrichment/youtube/*.json`, `index/enriched_manifest_youtube.json`
 
 The most complex stage. For each video markdown file:
 
 1. **Parse** — `MarkdownParser` extracts title, video_id, transcript, and metadata via regex
-2. **Cache check** — looks for `cache/enrichment/{video_id}.json`; loads and skips API call on hit
+2. **Cache check** — looks for `cache/enrichment/youtube/{video_id}.json`; loads and skips API call on hit
 3. **Enrich** — on cache miss, sends a structured prompt to Gemini 2.5 Pro requesting JSON output
-4. **Save cache** — writes raw JSON response to `cache/enrichment/{video_id}.json`
+4. **Save cache** — writes raw JSON response to `cache/enrichment/youtube/{video_id}.json`
 5. **Write enriched markdown** — `MarkdownWriter` produces a fully structured file with YAML front-matter
 6. **Playlist enrichment** — after all videos, sends a playlist-level prompt summarising all video summaries
 

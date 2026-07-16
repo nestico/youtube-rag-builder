@@ -19,6 +19,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [0.5.0] — 2026-07-16
+
+### Changed
+- Source-symmetric directory layout: all YouTube data moved under `youtube/` subdirectories (`metadata/youtube/`, `transcripts/youtube/`, `markdown/youtube/`, `markdown/enriched/youtube/`, `cache/enrichment/youtube/`), mirroring the `linkedin/` layout
+- YouTube manifest renamed to `index/enriched_manifest_youtube.json`
+- `--source` CLI choices are now derived from `SOURCE_CONFIGS` — adding a source requires no argparse change
+
+### Added
+- `.claude/skills/add-video-source` — project skill encoding the checklist for adding a new video source (directory layout, importer schema, SOURCE_CONFIGS entry, licensing rules, tests, docs), in preparation for MS Teams and TikTok sources
+
+---
+
 ## [0.4.0] — 2026-07-16
 
 ### Added

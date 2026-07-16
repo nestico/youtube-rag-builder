@@ -11,8 +11,8 @@ from youtube_transcript_api import (
 )
 
 ROOT = Path(__file__).parent.parent
-METADATA_FILE = ROOT / "metadata" / "command_bar_playlist.json"
-TRANSCRIPTS_DIR = ROOT / "transcripts"
+METADATA_FILE = ROOT / "metadata" / "youtube" / "command_bar_playlist.json"
+TRANSCRIPTS_DIR = ROOT / "transcripts" / "youtube"
 INDEX_DIR = ROOT / "index"
 CSV_FILE = INDEX_DIR / "videos.csv"
 JSON_FILE = INDEX_DIR / "videos.json"
@@ -42,7 +42,7 @@ def extract_transcript(video_id: str) -> list[dict[str, Any]] | None:
 
 
 def save_transcript(video_id: str, segments: list[dict[str, Any]]) -> str:
-    TRANSCRIPTS_DIR.mkdir(exist_ok=True)
+    TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
     file_name = f"{video_id}.json"
     path = TRANSCRIPTS_DIR / file_name
     with open(path, "w", encoding="utf-8") as f:

@@ -26,23 +26,23 @@ The pipeline supports two content sources that converge at the enrichment stage:
 │         ▼                                                            │
 │  ┌─────────────┐                                                     │
 │  │  Stage 1    │  extract_playlist.py                                │
-│  │  Metadata   │──► metadata/command_bar_playlist.json               │
+│  │  Metadata   │──► metadata/youtube/command_bar_playlist.json               │
 │  │  Extraction │                                                     │
 │  └──────┬──────┘                                                     │
 │         │                                                            │
 │         ▼                                                            │
 │  ┌─────────────┐                                                     │
 │  │  Stage 2    │  extract_all_transcripts.py                         │
-│  │  Transcript │──► transcripts/{video_id}.json                      │
+│  │  Transcript │──► transcripts/youtube/{video_id}.json                      │
 │  │  Extraction │──► index/videos.csv                                 │
 │  └──────┬──────┘──► index/videos.json                               │
 │         │                                                            │
 │         ▼                                                            │
 │  ┌─────────────┐                                                     │
 │  │  Stage 3    │  generate_markdown.py                               │
-│  │  Markdown   │──► markdown/videos/{video_id}.md                   │
-│  │  Generation │──► markdown/playlists/{slug}.md                    │
-│  └──────┬──────┘──► markdown/index.md                               │
+│  │  Markdown   │──► markdown/youtube/videos/{video_id}.md                   │
+│  │  Generation │──► markdown/youtube/playlists/{slug}.md            │
+│  └──────┬──────┘──► markdown/youtube/index.md                       │
 │         │           index/markdown_manifest.json                     │
 │         ▼                                                            │
 │  ┌─────────────┐                                                     │
@@ -50,7 +50,7 @@ The pipeline supports two content sources that converge at the enrichment stage:
 │  │  AI         │──► markdown/enriched/videos/{video_id}.md           │
 │  │  Enrichment │──► markdown/enriched/playlists/{slug}.md            │
 │  │  (Gemini)   │──► cache/enrichment/{video_id}.json                 │
-│  └─────────────┘──► index/enriched_manifest.json                    │
+│  └─────────────┘──► index/enriched_manifest_{source}.json           │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -100,14 +100,14 @@ flowchart TD
     end
 
     YT --> S1
-    S1 -->|metadata/command_bar_playlist.json| S2
-    S2 -->|transcripts/video_id.json| S3
-    S3 -->|markdown/videos/video_id.md| S4
+    S1 -->|metadata/youtube/command_bar_playlist.json| S2
+    S2 -->|transcripts/youtube/video_id.json| S3
+    S3 -->|markdown/youtube/videos/video_id.md| S4
     LI -->|Transcript tab, manual copy| SL
     SL -->|markdown/linkedin/videos/slug.md| S4
 
-    S4 --> R1[(markdown/enriched/\nvideos/)]
-    S4 --> R2[(markdown/enriched/\nplaylists/)]
+    S4 --> R1[(markdown/enriched/\nsource/videos/)]
+    S4 --> R2[(markdown/enriched/\nsource/playlists/)]
     S4 --> R3[(index/\nenriched manifests)]
 ```
 
@@ -145,11 +145,11 @@ LLMProvider (abstract)
 
 | Path | youtube | linkedin |
 |---|---|---|
-| Input markdown | `markdown/videos/` | `markdown/linkedin/videos/` |
-| Metadata | `metadata/command_bar_playlist.json` | `metadata/linkedin/pl400_cert_prep.json` |
-| Enriched output | `markdown/enriched/` | `markdown/enriched/linkedin/` |
-| Cache | `cache/enrichment/` | `cache/enrichment/linkedin/` |
-| Manifest | `index/enriched_manifest.json` | `index/enriched_manifest_linkedin.json` |
+| Input markdown | `markdown/youtube/videos/` | `markdown/linkedin/videos/` |
+| Metadata | `metadata/youtube/command_bar_playlist.json` | `metadata/linkedin/pl400_cert_prep.json` |
+| Enriched output | `markdown/enriched/youtube/` | `markdown/enriched/linkedin/` |
+| Cache | `cache/enrichment/youtube/` | `cache/enrichment/linkedin/` |
+| Manifest | `index/enriched_manifest_youtube.json` | `index/enriched_manifest_linkedin.json` |
 
 The `--source` CLI flag selects which sources to process (`youtube` is the default; `all` runs both). Adding a new source is one new entry in `SOURCE_CONFIGS` plus a way to produce its input markdown.
 
@@ -187,7 +187,7 @@ technologies:
 |---|---|---|
 | extract_playlist | YouTube URL | `metadata/*.json` |
 | extract_all_transcripts | `metadata/*.json` | `transcripts/*.json`, `index/videos.*` |
-| generate_markdown | `metadata/*.json` + `transcripts/*.json` | `markdown/videos/**`, `markdown/playlists/**` |
+| generate_markdown | `metadata/youtube/*.json` + `transcripts/youtube/*.json` | `markdown/youtube/**` |
 | import_linkedin_course | `metadata/linkedin/*.json` + `transcripts/linkedin/*.txt` | `markdown/linkedin/videos/**` |
 | enrich_markdown | per-source markdown dirs | per-source `markdown/enriched/**`, `cache/**`, manifests |
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 PLAYLIST_URL = "https://www.youtube.com/playlist?list=PL5xdZrvu1OhVx4c2YCgTJYbYUi9Uznxag"
 
-output_dir = Path(__file__).parent.parent / "metadata"
+output_dir = Path(__file__).parent.parent / "metadata" / "youtube"
 output_dir.mkdir(exist_ok=True)
 
 ydl_opts = {

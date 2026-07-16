@@ -59,10 +59,10 @@ PLAYLIST_URL = "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID"
 py scripts/extract_playlist.py
 ```
 
-Output: `metadata/command_bar_playlist.json`
+Output: `metadata/youtube/command_bar_playlist.json`
 
 ```
-Saved playlist metadata to metadata/command_bar_playlist.json
+Saved playlist metadata to metadata/youtube/command_bar_playlist.json
 Videos found: 24
 ```
 
@@ -74,7 +74,7 @@ Videos found: 24
 py scripts/extract_all_transcripts.py
 ```
 
-Output: `transcripts/{video_id}.json` for each video, plus `index/videos.csv` and `index/videos.json`
+Output: `transcripts/youtube/{video_id}.json` for each video, plus `index/videos.csv` and `index/videos.json`
 
 ```
 [1/24] Downloading transcript: Introduction to Command Bar
@@ -96,7 +96,7 @@ Failed       : 1
 py scripts/generate_markdown.py
 ```
 
-Output: `markdown/videos/*.md`, `markdown/playlists/*.md`, `markdown/index.md`, `index/markdown_manifest.json`
+Output: `markdown/youtube/videos/*.md`, `markdown/youtube/playlists/*.md`, `markdown/youtube/index.md`, `index/markdown_manifest.json`
 
 ```
 [1/24] Generating markdown: Introduction to Command Bar
@@ -127,7 +127,7 @@ py scripts/enrich_markdown.py --limit 3
 py scripts/enrich_markdown.py
 ```
 
-Output: `markdown/enriched/videos/*.md`, `markdown/enriched/playlists/*.md`, `cache/enrichment/*.json`, `index/enriched_manifest.json`
+Output: `markdown/enriched/youtube/videos/*.md`, `markdown/enriched/youtube/playlists/*.md`, `cache/enrichment/youtube/*.json`, `index/enriched_manifest_youtube.json`
 
 ```
 Using provider: Gemini
@@ -162,7 +162,7 @@ CACHE HIT
 After a full run, your knowledge base is in `markdown/enriched/`:
 
 ```
-markdown/enriched/
+markdown/enriched/youtube/
 ├── playlists/
 │   └── Power-Apps---Command-Bar.md   # Playlist summary + learning path
 └── videos/

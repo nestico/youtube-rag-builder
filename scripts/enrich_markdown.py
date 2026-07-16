@@ -11,13 +11,13 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).parent.parent
-VIDEOS_DIR = ROOT / "markdown" / "videos"
-METADATA_FILE = ROOT / "metadata" / "command_bar_playlist.json"
+VIDEOS_DIR = ROOT / "markdown" / "youtube" / "videos"
+METADATA_FILE = ROOT / "metadata" / "youtube" / "command_bar_playlist.json"
 ENRICHED_DIR = ROOT / "markdown" / "enriched"
-ENRICHED_VIDEOS_DIR = ENRICHED_DIR / "videos"
-ENRICHED_PLAYLISTS_DIR = ENRICHED_DIR / "playlists"
+ENRICHED_VIDEOS_DIR = ENRICHED_DIR / "youtube" / "videos"
+ENRICHED_PLAYLISTS_DIR = ENRICHED_DIR / "youtube" / "playlists"
 INDEX_DIR = ROOT / "index"
-MANIFEST_FILE = INDEX_DIR / "enriched_manifest.json"
+MANIFEST_FILE = INDEX_DIR / "enriched_manifest_youtube.json"
 CACHE_DIR = ROOT / "cache" / "enrichment"
 
 SOURCE_CONFIGS: dict[str, dict[str, Path]] = {
@@ -27,7 +27,7 @@ SOURCE_CONFIGS: dict[str, dict[str, Path]] = {
         "enriched_videos_dir": ENRICHED_VIDEOS_DIR,
         "enriched_playlists_dir": ENRICHED_PLAYLISTS_DIR,
         "manifest_file": MANIFEST_FILE,
-        "cache_dir": CACHE_DIR,
+        "cache_dir": CACHE_DIR / "youtube",
     },
     "linkedin": {
         "videos_dir": ROOT / "markdown" / "linkedin" / "videos",
@@ -570,7 +570,7 @@ def main() -> None:
     arg_parser = argparse.ArgumentParser(description="Enrich video markdown with LLM metadata.")
     arg_parser.add_argument("--limit", type=int, default=None, metavar="N",
                             help="Process only the first N videos.")
-    arg_parser.add_argument("--source", choices=["youtube", "linkedin", "all"],
+    arg_parser.add_argument("--source", choices=[*SOURCE_CONFIGS, "all"],
                             default="youtube",
                             help="Content source to enrich (default: youtube).")
     args = arg_parser.parse_args()
@@ -581,7 +581,7 @@ def main() -> None:
     log.info(f"Model: {provider.model}")
     writer = MarkdownWriter()
 
-    sources = ["youtube", "linkedin"] if args.source == "all" else [args.source]
+    sources = list(SOURCE_CONFIGS) if args.source == "all" else [args.source]
     for source in sources:
         log.info(f"--- Source: {source} ---")
         process_source(source, SOURCE_CONFIGS[source], provider, parser, writer, args.limit)
