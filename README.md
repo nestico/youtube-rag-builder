@@ -1,30 +1,32 @@
 # youtube-rag-builder
 
-A pipeline that turns a YouTube playlist into a fully enriched RAG knowledge base — extracting transcripts, generating structured markdown, and enriching content with AI-generated summaries, key concepts, keywords, and suggested questions ready for vector database ingestion.
+A pipeline that turns YouTube playlists and LinkedIn Learning courses into a fully enriched RAG knowledge base — extracting transcripts, generating structured markdown, and enriching content with AI-generated summaries, key concepts, keywords, and suggested questions ready for vector database ingestion.
 
 ---
 
 ## Overview
 
 ```
-YouTube Playlist
-      │
-      ▼
- Metadata Extraction  ──► metadata/
-      │
-      ▼
- Transcript Extraction ──► transcripts/
-      │
-      ▼
- Markdown Generation  ──► markdown/videos/
-      │                   markdown/playlists/
-      ▼
- AI Enrichment        ──► markdown/enriched/videos/
-  (Gemini 2.5 Pro)        markdown/enriched/playlists/
-      │
-      ├──► cache/enrichment/     (JSON response cache)
-      │
-      └──► index/                (manifests & indexes)
+YouTube Playlist                     LinkedIn Learning Course
+      │  (automated)                       │  (manual import,
+      ▼                                    │   licensed seat)
+ Metadata Extraction ──► metadata/         ▼
+      │                              Course manifest + copied
+      ▼                              transcripts
+ Transcript Extraction ──► transcripts/    │
+      │                                    ▼
+      ▼                              import_linkedin_course.py
+ Markdown Generation ──► markdown/videos/  │
+      │                                    ▼
+      │                     markdown/linkedin/videos/
+      │                                    │
+      └────────────────┬───────────────────┘
+                       ▼
+              AI Enrichment (Gemini 2.5 Pro)
+                       │
+       ├──► markdown/enriched/            (per-source outputs)
+       ├──► cache/enrichment/             (JSON response cache)
+       └──► index/                        (manifests & indexes)
 ```
 
 ---
@@ -33,6 +35,8 @@ YouTube Playlist
 
 - Extract YouTube playlist metadata via `yt-dlp`
 - Download video transcripts via `youtube-transcript-api`
+- Import LinkedIn Learning courses via manifest + manually copied transcripts (ToS-compliant, uses your licensed seat)
+- Multi-source enrichment: `--source youtube | linkedin | all`
 - Generate structured markdown files per video and per playlist
 - Enrich markdown with AI using Google Gemini:
   - Executive summary
@@ -78,33 +82,48 @@ youtube-rag-builder/
 │
 ├── cache/
 │   └── enrichment/          # Cached Gemini responses (JSON per video)
+│       └── linkedin/        # Separate cache for LinkedIn lessons
 │
 ├── docs/                    # Project documentation
 │   ├── architecture.md
 │   ├── folder-structure.md
+│   ├── linkedin-import.md
 │   ├── pipeline.md
 │   └── quickstart.md
 │
 ├── index/
-│   └── enriched_manifest.json   # Enrichment manifest for RAG ingestion
+│   ├── enriched_manifest.json           # YouTube enrichment manifest
+│   └── enriched_manifest_linkedin.json  # LinkedIn enrichment manifest
 │
-├── markdown/
+├── markdown/                # Generated at pipeline runtime
+│   ├── videos/              # Plain video markdown (YouTube)
+│   ├── playlists/           # Plain playlist markdown (YouTube)
+│   ├── linkedin/
+│   │   └── videos/          # Plain lesson markdown (LinkedIn)
 │   └── enriched/
-│       ├── playlists/       # AI-enriched playlist summaries
-│       └── videos/          # AI-enriched video markdown (YAML front-matter)
+│       ├── playlists/       # AI-enriched playlist summaries (YouTube)
+│       ├── videos/          # AI-enriched video markdown (YouTube)
+│       └── linkedin/
+│           ├── playlists/   # AI-enriched course summary (LinkedIn)
+│           └── videos/      # AI-enriched lesson markdown (LinkedIn)
 │
-├── metadata/                # Raw playlist metadata JSON (yt-dlp output)
+├── metadata/                # Playlist/course metadata (generated + hand-authored)
+│   └── linkedin/            # LinkedIn course manifests (hand-authored)
 │
-├── transcripts/             # Raw video transcripts (JSON per video)
+├── transcripts/             # Raw video transcripts (generated JSON)
+│   └── linkedin/            # Manually copied LinkedIn transcripts (.txt)
 │
 ├── scripts/
 │   ├── extract_playlist.py        # Step 1: Extract playlist metadata
 │   ├── extract_all_transcripts.py # Step 2: Download transcripts
 │   ├── generate_markdown.py       # Step 3: Generate markdown files
-│   └── enrich_markdown.py         # Step 4: AI enrichment pipeline
+│   ├── import_linkedin_course.py  # LinkedIn: manifest + transcripts → markdown
+│   └── enrich_markdown.py         # Step 4: AI enrichment (--source youtube|linkedin|all)
 │
 └── requirements.txt
 ```
+
+> Data directories (`cache/`, `metadata/`, `transcripts/`, `markdown/`, `index/`) are generated at runtime and excluded from git — only scripts and docs are committed.
 
 ---
 
@@ -112,10 +131,10 @@ youtube-rag-builder/
 
 **Requirements:** Python 3.11+
 
-```bash
+```powershell
 git clone https://github.com/your-username/youtube-rag-builder.git
 cd youtube-rag-builder
-pip install -r requirements.txt
+py -m pip install -r requirements.txt
 ```
 
 ---
@@ -135,26 +154,43 @@ No code changes needed — the pipeline reads the key automatically.
 
 ## Usage
 
+### YouTube pipeline
+
 Run each step in sequence:
 
-```bash
+```powershell
 # Step 1 — Extract playlist metadata
-py scripts/extract_playlist.py
+py scripts\extract_playlist.py
 
 # Step 2 — Download transcripts
-py scripts/extract_all_transcripts.py
+py scripts\extract_all_transcripts.py
 
 # Step 3 — Generate markdown
-py scripts/generate_markdown.py
+py scripts\generate_markdown.py
 
 # Step 4 — Enrich with AI (all videos)
-py scripts/enrich_markdown.py
+py scripts\enrich_markdown.py
 
 # Step 4 — Enrich with AI (limit for testing)
-py scripts/enrich_markdown.py --limit 3
+py scripts\enrich_markdown.py --limit 3
 ```
 
-See [docs/quickstart.md](docs/quickstart.md) for a full walkthrough.
+### LinkedIn Learning course
+
+Fill in the course manifest, copy transcripts from each lesson's Transcript tab, then:
+
+```powershell
+py scripts\import_linkedin_course.py
+py scripts\enrich_markdown.py --source linkedin
+```
+
+Or enrich everything at once:
+
+```powershell
+py scripts\enrich_markdown.py --source all
+```
+
+See [docs/quickstart.md](docs/quickstart.md) for a full walkthrough and [docs/linkedin-import.md](docs/linkedin-import.md) for the LinkedIn workflow.
 
 ---
 
@@ -191,15 +227,17 @@ Followed by structured sections:
 
 ## Future Roadmap
 
+- [x] Multi-source support (YouTube + LinkedIn Learning)
+- [x] Incremental enrichment via response cache (already-enriched videos are free)
 - [ ] Supabase vector database integration
 - [ ] Azure OpenAI provider implementation
 - [ ] OpenAI provider implementation
 - [ ] Anthropic Claude provider implementation
-- [ ] Incremental enrichment (skip already-enriched videos)
 - [ ] Web UI for browsing the knowledge base
 - [ ] Multi-playlist support
 - [ ] Chunking strategy for large transcripts
 - [ ] Embedding generation pipeline
+- [ ] Cross-source "hub" summaries (e.g., mapping cert modules to tutorial videos)
 
 ---
 

@@ -19,8 +19,8 @@ Thank you for your interest in contributing to youtube-rag-builder.
    source .venv/bin/activate # macOS/Linux
    ```
 4. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
+   ```powershell
+   py -m pip install -r requirements.txt
    ```
 5. Set your API key (see [README — Setup](README.md#setup--gemini-api-key))
 

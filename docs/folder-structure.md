@@ -3,45 +3,62 @@
 ```
 youtube-rag-builder/
 │
-├── cache/
+├── cache/                         # Generated at runtime
 │   └── enrichment/
-│       └── {video_id}.json        # Cached Gemini enrichment response per video
+│       ├── {video_id}.json        # Cached Gemini response per YouTube video
+│       └── linkedin/
+│           └── {slug}.json        # Cached Gemini response per LinkedIn lesson
 │
 ├── docs/
 │   ├── architecture.md            # System architecture and design
 │   ├── folder-structure.md        # This file
+│   ├── linkedin-import.md         # LinkedIn Learning import workflow
 │   ├── pipeline.md                # Detailed pipeline stage documentation
 │   └── quickstart.md              # Step-by-step setup and usage guide
 │
-├── index/
-│   ├── enriched_manifest.json     # List of all enriched files (RAG ingestion input)
-│   ├── markdown_manifest.json     # List of all generated markdown files
-│   ├── videos.csv                 # Transcript extraction results (CSV)
-│   └── videos.json                # Transcript extraction results (JSON)
+├── index/                         # Generated at runtime
+│   ├── enriched_manifest.json           # YouTube enrichment manifest
+│   ├── enriched_manifest_linkedin.json  # LinkedIn enrichment manifest
+│   ├── markdown_manifest.json           # Generated markdown files list
+│   ├── videos.csv                       # Transcript extraction results (CSV)
+│   └── videos.json                      # Transcript extraction results (JSON)
 │
-├── markdown/
+├── markdown/                      # Generated at runtime
 │   ├── index.md                   # Top-level knowledge base index
 │   ├── playlists/
 │   │   └── {slug}.md              # Plain playlist markdown (video list)
 │   ├── videos/
 │   │   └── {video_id}.md          # Plain video markdown (metadata + transcript)
+│   ├── linkedin/
+│   │   └── videos/
+│   │       └── {slug}.md          # Plain LinkedIn lesson markdown
 │   └── enriched/
 │       ├── playlists/
-│       │   └── {slug}.md          # AI-enriched playlist summary
-│       └── videos/
-│           └── {video_id}.md      # AI-enriched video (YAML front-matter + sections)
+│       │   └── {slug}.md          # AI-enriched playlist summary (YouTube)
+│       ├── videos/
+│       │   └── {video_id}.md      # AI-enriched video (YouTube)
+│       └── linkedin/
+│           ├── playlists/
+│           │   └── {slug}.md      # AI-enriched course summary (LinkedIn)
+│           └── videos/
+│               └── {slug}.md      # AI-enriched lesson (LinkedIn)
 │
 ├── metadata/
-│   └── command_bar_playlist.json  # Raw playlist metadata from yt-dlp
+│   ├── command_bar_playlist.json  # Raw playlist metadata from yt-dlp (generated)
+│   └── linkedin/
+│       └── pl400_cert_prep.json   # LinkedIn course manifest (hand-authored)
 │
 ├── transcripts/
-│   └── {video_id}.json            # Raw transcript segments from YouTube
+│   ├── {video_id}.json            # Raw YouTube transcript segments (generated)
+│   └── linkedin/
+│       └── {slug}.txt             # Manually copied LinkedIn transcripts
 │
 ├── scripts/
 │   ├── extract_playlist.py        # Stage 1: Playlist metadata extraction
 │   ├── extract_all_transcripts.py # Stage 2: Transcript download
 │   ├── generate_markdown.py       # Stage 3: Markdown generation
-│   └── enrich_markdown.py         # Stage 4: AI enrichment pipeline
+│   ├── import_linkedin_course.py  # LinkedIn: manifest + transcripts → markdown
+│   └── enrich_markdown.py         # Stage 4: AI enrichment (multi-source)
 │
 ├── .gitignore
 ├── CHANGELOG.md
@@ -50,6 +67,8 @@ youtube-rag-builder/
 ├── README.md
 └── requirements.txt
 ```
+
+> Directories marked "generated at runtime" are excluded from git and appear after running the pipeline. `metadata/linkedin/` and `transcripts/linkedin/` are hand-authored inputs you create as part of the LinkedIn workflow.
 
 ---
 
@@ -87,6 +106,10 @@ Raw JSON output from `yt-dlp`. Contains all playlist and video metadata. Not com
 ### `transcripts/`
 
 Raw transcript JSON from `youtube-transcript-api`. One file per video. Not committed to git by default.
+
+### `markdown/enriched/linkedin/` and related `linkedin/` subdirectories
+
+The LinkedIn Learning source mirrors the YouTube layout one level deeper: hand-authored manifest in `metadata/linkedin/`, manually copied transcripts in `transcripts/linkedin/`, generated lesson markdown in `markdown/linkedin/videos/`, and enriched output in `markdown/enriched/linkedin/`. See [linkedin-import.md](linkedin-import.md).
 
 ### `scripts/`
 

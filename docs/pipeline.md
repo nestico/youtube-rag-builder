@@ -93,13 +93,21 @@ The most complex stage. For each video markdown file:
 5. **Write enriched markdown** — `MarkdownWriter` produces a fully structured file with YAML front-matter
 6. **Playlist enrichment** — after all videos, sends a playlist-level prompt summarising all video summaries
 
-```bash
-# Full run
-py scripts/enrich_markdown.py
+```powershell
+# Full run (YouTube, the default source)
+py scripts\enrich_markdown.py
 
 # Test run (first N videos only)
-py scripts/enrich_markdown.py --limit 3
+py scripts\enrich_markdown.py --limit 3
+
+# LinkedIn Learning lessons only
+py scripts\enrich_markdown.py --source linkedin
+
+# Everything
+py scripts\enrich_markdown.py --source all
 ```
+
+Each source has its own input directory, enriched output directory, cache directory, and manifest — see the Source Configuration table in [architecture.md](architecture.md).
 
 ### Enrichment Prompt — Video
 
@@ -135,3 +143,15 @@ enrich_video(parsed)
 ```
 
 Cached files persist across runs. Delete `cache/enrichment/` to force a full re-enrichment.
+
+---
+
+## Alternate Source — LinkedIn Learning
+
+**Script:** `scripts/import_linkedin_course.py`
+**Input:** `metadata/linkedin/*.json` (hand-authored course manifest) + `transcripts/linkedin/{slug}.txt` (transcripts copied from each lesson's Transcript tab)
+**Output:** `markdown/linkedin/videos/{slug}.md`
+
+LinkedIn Learning has no public transcript API, so this source is manifest-driven: you select the key video per course module, copy its transcript from the browser, and the import script generates markdown in the same schema as the YouTube pipeline. The enrichment stage then processes it identically via `--source linkedin`.
+
+See [linkedin-import.md](linkedin-import.md) for the full workflow.

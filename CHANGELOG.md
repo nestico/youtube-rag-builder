@@ -15,6 +15,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Multi-playlist support
 - Embedding generation pipeline
 - Web UI for knowledge base browsing
+- Cross-source hub summaries
+
+---
+
+## [0.4.0] — 2026-07-16
+
+### Added
+- Multi-source architecture: `--source youtube | linkedin | all` flag on `enrich_markdown.py`
+- `SOURCE_CONFIGS` mapping — each source gets its own markdown dirs, enriched output dirs, cache dir, and manifest
+- `import_linkedin_course.py` — imports LinkedIn Learning lessons from a hand-authored course manifest (`metadata/linkedin/*.json`) plus manually copied transcripts (`transcripts/linkedin/*.txt`); ToS-compliant workflow using the subscriber's licensed seat
+- Optional per-lesson `url` field in the LinkedIn manifest for lesson-specific deep links
+- `docs/linkedin-import.md` — step-by-step LinkedIn import guide
+- `index/enriched_manifest_linkedin.json` and `cache/enrichment/linkedin/` outputs
+- Mermaid pipeline diagram in `docs/architecture.md`
+
+### Fixed
+- `[Enriched Notes]` links in enriched playlist files were missing `../` and resolved to a non-existent path
+- "Watch on YouTube" link label was hardcoded for all sources; now source-neutral "Watch video"
 
 ---
 

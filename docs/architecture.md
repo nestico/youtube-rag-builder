@@ -4,6 +4,11 @@
 
 youtube-rag-builder is a sequential data pipeline. Each stage is an independent Python script that reads from one directory and writes to another. Stages can be re-run independently — for example, re-running enrichment on already-generated markdown without re-downloading transcripts.
 
+The pipeline supports two content sources that converge at the enrichment stage:
+
+- **YouTube** — fully automated (yt-dlp + youtube-transcript-api)
+- **LinkedIn Learning** — manifest-driven manual import (transcripts copied from the Transcript tab under the subscriber's licensed seat; automated scraping is not supported as it violates LinkedIn's ToS)
+
 ---
 
 ## Pipeline Stages
@@ -88,14 +93,22 @@ flowchart TD
         E --> W
     end
 
+    LI([💼 LinkedIn Learning Course])
+    subgraph SL["LinkedIn import — import_linkedin_course.py"]
+        direction TB
+        M[Course manifest JSON\n+ copied transcripts]
+    end
+
     YT --> S1
     S1 -->|metadata/command_bar_playlist.json| S2
     S2 -->|transcripts/video_id.json| S3
     S3 -->|markdown/videos/video_id.md| S4
+    LI -->|Transcript tab, manual copy| SL
+    SL -->|markdown/linkedin/videos/slug.md| S4
 
     S4 --> R1[(markdown/enriched/\nvideos/)]
     S4 --> R2[(markdown/enriched/\nplaylists/)]
-    S4 --> R3[(index/\nenriched_manifest.json)]
+    S4 --> R3[(index/\nenriched manifests)]
 ```
 
 ---
@@ -125,6 +138,20 @@ LLMProvider (abstract)
 ```
 
 `build_provider()` is the single wiring point — swapping providers requires changing one function.
+
+### Source Configuration (`enrich_markdown.py`)
+
+`SOURCE_CONFIGS` maps each content source to its own set of paths:
+
+| Path | youtube | linkedin |
+|---|---|---|
+| Input markdown | `markdown/videos/` | `markdown/linkedin/videos/` |
+| Metadata | `metadata/command_bar_playlist.json` | `metadata/linkedin/pl400_cert_prep.json` |
+| Enriched output | `markdown/enriched/` | `markdown/enriched/linkedin/` |
+| Cache | `cache/enrichment/` | `cache/enrichment/linkedin/` |
+| Manifest | `index/enriched_manifest.json` | `index/enriched_manifest_linkedin.json` |
+
+The `--source` CLI flag selects which sources to process (`youtube` is the default; `all` runs both). Adding a new source is one new entry in `SOURCE_CONFIGS` plus a way to produce its input markdown.
 
 ### Cache Layer
 
@@ -160,8 +187,9 @@ technologies:
 |---|---|---|
 | extract_playlist | YouTube URL | `metadata/*.json` |
 | extract_all_transcripts | `metadata/*.json` | `transcripts/*.json`, `index/videos.*` |
-| generate_markdown | `metadata/*.json` + `transcripts/*.json` | `markdown/**` |
-| enrich_markdown | `markdown/videos/*.md` | `markdown/enriched/**`, `cache/**`, `index/enriched_manifest.json` |
+| generate_markdown | `metadata/*.json` + `transcripts/*.json` | `markdown/videos/**`, `markdown/playlists/**` |
+| import_linkedin_course | `metadata/linkedin/*.json` + `transcripts/linkedin/*.txt` | `markdown/linkedin/videos/**` |
+| enrich_markdown | per-source markdown dirs | per-source `markdown/enriched/**`, `cache/**`, manifests |
 
 ---
 

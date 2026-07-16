@@ -20,6 +20,25 @@ INDEX_DIR = ROOT / "index"
 MANIFEST_FILE = INDEX_DIR / "enriched_manifest.json"
 CACHE_DIR = ROOT / "cache" / "enrichment"
 
+SOURCE_CONFIGS: dict[str, dict[str, Path]] = {
+    "youtube": {
+        "videos_dir": VIDEOS_DIR,
+        "metadata_file": METADATA_FILE,
+        "enriched_videos_dir": ENRICHED_VIDEOS_DIR,
+        "enriched_playlists_dir": ENRICHED_PLAYLISTS_DIR,
+        "manifest_file": MANIFEST_FILE,
+        "cache_dir": CACHE_DIR,
+    },
+    "linkedin": {
+        "videos_dir": ROOT / "markdown" / "linkedin" / "videos",
+        "metadata_file": ROOT / "metadata" / "linkedin" / "pl400_cert_prep.json",
+        "enriched_videos_dir": ENRICHED_DIR / "linkedin" / "videos",
+        "enriched_playlists_dir": ENRICHED_DIR / "linkedin" / "playlists",
+        "manifest_file": INDEX_DIR / "enriched_manifest_linkedin.json",
+        "cache_dir": CACHE_DIR / "linkedin",
+    },
+}
+
 
 # ─── LLM Provider interface ───────────────────────────────────────────────────
 
@@ -198,12 +217,13 @@ Videos:
 # ─── Enrichment engine ────────────────────────────────────────────────────────
 
 class EnrichmentEngine:
-    def __init__(self, provider: LLMProvider) -> None:
+    def __init__(self, provider: LLMProvider, cache_dir: Path = CACHE_DIR) -> None:
         self.provider = provider
+        self.cache_dir = cache_dir
 
     def enrich_video(self, parsed: dict[str, Any]) -> dict[str, Any]:
         video_id = parsed.get("video_id", "")
-        cache_path = CACHE_DIR / f"{video_id}.json"
+        cache_path = self.cache_dir / f"{video_id}.json"
 
         if cache_path.exists():
             log.info("CACHE HIT")
@@ -221,7 +241,7 @@ class EnrichmentEngine:
         )
         enrichment = self._parse_json(self.provider.complete(prompt))
 
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         cache_path.write_text(
             json.dumps(enrichment, indent=2, ensure_ascii=False), encoding="utf-8"
         )
@@ -297,7 +317,7 @@ class MarkdownWriter:
             video_id,
             "",
             "Video URL:",
-            f"[Watch on YouTube]({url})",
+            f"[Watch video]({url})",
             "",
             "Duration:",
             f"{duration} seconds",
@@ -395,9 +415,9 @@ class MarkdownWriter:
             lines += [
                 f"### {i}. {vt}",
                 "",
-                f"[Watch on YouTube]({vurl})",
+                f"[Watch video]({vurl})",
                 "",
-                f"[Enriched Notes](videos/{vid}.md)",
+                f"[Enriched Notes](../videos/{vid}.md)",
                 "",
             ]
 
@@ -413,14 +433,18 @@ def slugify(title: str) -> str:
     return slug.strip("-")
 
 
-def save_manifest(playlist_title: str, records: list[dict[str, str]]) -> None:
+def save_manifest(
+    playlist_title: str,
+    records: list[dict[str, str]],
+    manifest_file: Path = MANIFEST_FILE,
+) -> None:
     manifest = {
         "playlist": playlist_title,
         "videos_processed": len(records),
         "enriched_files": records,
     }
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
-    MANIFEST_FILE.write_text(
+    manifest_file.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
@@ -448,31 +472,37 @@ def build_provider() -> LLMProvider:
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
-def main() -> None:
-    arg_parser = argparse.ArgumentParser(description="Enrich video markdown with LLM metadata.")
-    arg_parser.add_argument("--limit", type=int, default=None, metavar="N",
-                            help="Process only the first N videos.")
-    args = arg_parser.parse_args()
+def process_source(
+    source: str,
+    cfg: dict[str, Path],
+    provider: LLMProvider,
+    parser: MarkdownParser,
+    writer: MarkdownWriter,
+    limit: int | None,
+) -> None:
+    metadata_file = cfg["metadata_file"]
+    if not metadata_file.exists():
+        log.warning(f"Skipping {source}: metadata file not found: {metadata_file}")
+        return
 
-    parser = MarkdownParser()
-    provider = build_provider()
-    log.info(f"Using provider: Gemini")
-    log.info(f"Model: {provider.model}")
-    engine = EnrichmentEngine(provider)
-    writer = MarkdownWriter()
+    video_files = sorted(cfg["videos_dir"].glob("*.md"))
+    if not video_files:
+        log.warning(f"Skipping {source}: no markdown files in {cfg['videos_dir']}")
+        return
+
+    engine = EnrichmentEngine(provider, cache_dir=cfg["cache_dir"])
 
     playlist_meta: dict[str, Any] = json.loads(
-        METADATA_FILE.read_text(encoding="utf-8")
+        metadata_file.read_text(encoding="utf-8")
     )
     playlist_title: str = playlist_meta.get("title", "Playlist")
     channel: str = playlist_meta.get("channel", "")
-    description: str = playlist_meta.get("description", "").strip()
+    description: str = (playlist_meta.get("description") or "").strip()
 
-    video_files = sorted(VIDEOS_DIR.glob("*.md"))
-    if args.limit is not None:
-        print(f"TEST MODE ENABLED")
-        print(f"Processing first {args.limit} videos")
-        video_files = video_files[: args.limit]
+    if limit is not None:
+        print("TEST MODE ENABLED")
+        print(f"Processing first {limit} videos")
+        video_files = video_files[:limit]
     total = len(video_files)
 
     success = 0
@@ -485,7 +515,7 @@ def main() -> None:
         try:
             parsed = parser.parse_video(md_path)
             enrichment = engine.enrich_video(parsed)
-            out_path = ENRICHED_VIDEOS_DIR / md_path.name
+            out_path = cfg["enriched_videos_dir"] / md_path.name
             writer.write_video(parsed, enrichment, out_path)
 
             video_id = parsed.get("video_id", md_path.stem)
@@ -511,7 +541,7 @@ def main() -> None:
             playlist_title, channel, all_enrichments
         )
         slug = slugify(playlist_title)
-        playlist_out = ENRICHED_PLAYLISTS_DIR / f"{slug}.md"
+        playlist_out = cfg["enriched_playlists_dir"] / f"{slug}.md"
         writer.write_playlist(
             playlist_title,
             channel,
@@ -524,16 +554,37 @@ def main() -> None:
     except Exception as exc:
         log.warning(f"Playlist enrichment failed: {exc}")
 
-    save_manifest(playlist_title, manifest_records)
+    save_manifest(playlist_title, manifest_records, cfg["manifest_file"])
 
     print()
     print("=================================")
-    print("Enrichment Complete")
+    print(f"Enrichment Complete ({source})")
     print("=================================")
     print(f"Videos Processed : {success}")
     print(f"Videos Failed    : {failed}")
     print(f"Playlist Files   : {playlist_files}")
     print(f"Index Created    : Yes")
+
+
+def main() -> None:
+    arg_parser = argparse.ArgumentParser(description="Enrich video markdown with LLM metadata.")
+    arg_parser.add_argument("--limit", type=int, default=None, metavar="N",
+                            help="Process only the first N videos.")
+    arg_parser.add_argument("--source", choices=["youtube", "linkedin", "all"],
+                            default="youtube",
+                            help="Content source to enrich (default: youtube).")
+    args = arg_parser.parse_args()
+
+    parser = MarkdownParser()
+    provider = build_provider()
+    log.info("Using provider: Gemini")
+    log.info(f"Model: {provider.model}")
+    writer = MarkdownWriter()
+
+    sources = ["youtube", "linkedin"] if args.source == "all" else [args.source]
+    for source in sources:
+        log.info(f"--- Source: {source} ---")
+        process_source(source, SOURCE_CONFIGS[source], provider, parser, writer, args.limit)
 
 
 if __name__ == "__main__":

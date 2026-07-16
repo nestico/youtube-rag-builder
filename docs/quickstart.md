@@ -14,10 +14,10 @@ This guide walks you through running the full pipeline from a YouTube playlist U
 
 ## 1. Clone and Install
 
-```bash
+```powershell
 git clone https://github.com/your-username/youtube-rag-builder.git
 cd youtube-rag-builder
-pip install -r requirements.txt
+py -m pip install -r requirements.txt
 ```
 
 ---
@@ -175,11 +175,24 @@ Each video file is ready for ingestion into a vector database such as Supabase, 
 
 ---
 
+## 6. Optional — Add a LinkedIn Learning Course
+
+If you have a LinkedIn Learning subscription, you can add selected course videos to the same knowledge base:
+
+```powershell
+py scripts\import_linkedin_course.py
+py scripts\enrich_markdown.py --source linkedin
+```
+
+This requires filling in a course manifest and copying transcripts manually — see [linkedin-import.md](linkedin-import.md) for the full workflow.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| `GEMINI_API_KEY_RAG_YOUTUBE is not set` | Open a new terminal after adding the env var, or verify the variable name is exact |
+| `GEMINI_API_KEY_RAG_YOUTUBE is not set` | Open a new terminal after adding the env var, or verify the variable name is exact. The script also reads the Windows registry directly, so this normally works even in IDE terminals — verify the stored value with `[System.Environment]::GetEnvironmentVariable("GEMINI_API_KEY_RAG_YOUTUBE", "User")` |
 | `API key not valid` | Check your key in Google AI Studio — ensure it has Gemini API access enabled |
 | Transcript download failed for a video | The video may have transcripts disabled; it will be skipped automatically |
 | `No module named 'yt_dlp'` | Run `pip install -r requirements.txt` |

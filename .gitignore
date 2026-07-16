@@ -46,10 +46,8 @@ metadata/
 cache/
 
 # Generated output (reproducible from source)
-markdown/videos/
-markdown/playlists/
-markdown/enriched/
-markdown/index.md
+# markdown/linkedin contains licensed LinkedIn Learning transcripts — never commit
+markdown/
 index/
 
 # Logs
